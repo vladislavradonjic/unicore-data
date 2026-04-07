@@ -1,0 +1,332 @@
+================================================================================
+UNICORE-DATA — DEPLOYMENT GUIDE
+================================================================================
+
+This file documents everything you need to deploy this project in a new
+environment or on a new machine. It covers prerequisites, setup steps, and
+a complete inventory of every hardcoded value that must be changed when the
+target environment differs from the local development defaults.
+
+
+--------------------------------------------------------------------------------
+1. OVERVIEW
+--------------------------------------------------------------------------------
+
+unicore-data is a dbt + Streamlit data platform project. It reads from a
+Postgres database populated either by the real UniCore ERP services (production)
+or by the included mock-data seeder (development/demo).
+
+Components:
+  - dbt models       models/                    SQL transformations and data products
+  - dbt seeds        seeds/                     Reference data CSVs loaded by dbt
+  - Streamlit app    app/                       6-page analytics dashboard
+  - Mock seeder      scripts/seed_source.py     Dev-only data generator
+  - Mock DB          docker-compose.yml         Local Postgres on port 5433
+
+
+--------------------------------------------------------------------------------
+2. PREREQUISITES
+--------------------------------------------------------------------------------
+
+  Python 3.12
+    Pinned in .mise.toml. If using mise: `mise install` will provision it.
+    Without mise: ensure `python3 --version` reports 3.12.x before creating
+    the virtualenv. Earlier versions are untested.
+
+  Docker + Docker Compose
+    Required to run the mock-source Postgres container (development/demo only).
+    Docker Compose V2 (the `docker compose` subcommand, not `docker-compose`).
+    In production the ERP Postgres databases are provided externally; Docker
+    is not required.
+
+  pip
+    Bundled with Python. Used to install project dependencies from
+    requirements.txt into the virtualenv.
+
+  psql (optional)
+    Only needed for the `make psql` convenience target. Any Postgres client
+    can be used instead.
+
+  Git
+    To clone the repository.
+
+
+--------------------------------------------------------------------------------
+3. SETUP STEPS
+--------------------------------------------------------------------------------
+
+All commands are run from the project root unless noted otherwise.
+
+Step 1 — Clone the repository
+  git clone <repo-url>
+  cd unicore-data
+
+Step 2 — Create and activate the Python virtualenv
+  python3.12 -m venv .venv
+  source .venv/bin/activate          # Linux / macOS
+  .venv\Scripts\activate             # Windows
+
+Step 3 — Install Python dependencies
+  pip install -r requirements.txt
+
+Step 4 — Start the mock-source Postgres container
+  make up
+  (Runs `docker compose up -d` and waits for the container to be healthy.)
+
+Step 5 — Seed mock source data
+  make seed
+  (Runs scripts/seed_source.py — generates ~150 assets and 2+ years of
+  depreciation data. DEV/DEMO ONLY. Do not run against production.)
+
+Step 6 — Build all dbt models
+  make dbt-run
+  (Runs `dbt seed` then `dbt run` — loads reference CSVs and builds all
+  source product tables, output ports, and consumer marts.)
+
+Step 7 — Start the Streamlit dashboard
+  streamlit run app/app.py
+  Dashboard is available at http://localhost:8501
+
+Shortcut — full reset from scratch:
+  make reset && streamlit run app/app.py
+  (Tears down and recreates everything from Step 4 through Step 6.)
+
+
+--------------------------------------------------------------------------------
+4. HARDCODED VALUES — WHAT TO CHANGE PER ENVIRONMENT
+--------------------------------------------------------------------------------
+
+4a. DATABASE CONNECTION
+-----------------------
+
+Five values define the database connection. In the default dev setup all five
+use the string "unicore" (port excepted). They appear in multiple files with
+NO shared source of truth — if you change one, change all of them.
+
+  DB_HOST       default: localhost
+  DB_PORT       default: 5433
+  DB_NAME       default: unicore
+  DB_USER       default: unicore
+  DB_PASSWORD   default: unicore
+
+File-by-file locations:
+
+  profiles.yml (lines 6-10)
+    host: localhost
+    port: 5433
+    user: unicore
+    password: unicore
+    dbname: unicore
+    This is the primary config for dbt. Update these when pointing dbt at a
+    different database.
+
+  app/db.py (line 12)
+    "postgresql+psycopg2://unicore:unicore@localhost:5433/unicore"
+    The full SQLAlchemy connection string is hardcoded as a single literal.
+    Update user, password, host, port, and dbname within this string.
+
+  scripts/seed_source.py (line 16)
+    DB = dict(host="localhost", port=5433, dbname="unicore",
+              user="unicore", password="unicore")
+    Update this dict. This script is dev/demo only — do not run in production.
+
+  docker-compose.yml (lines 6-10)
+    POSTGRES_DB: unicore
+    POSTGRES_USER: unicore
+    POSTGRES_PASSWORD: unicore
+    ports: "5433:5432"
+    Controls the mock-source container. Dev/demo only. The port mapping format
+    is HOST_PORT:CONTAINER_PORT — the container always listens on 5432
+    internally; only the left side (5433) needs to change if you want a
+    different host port.
+
+  Makefile (line 39)
+    psql postgresql://unicore:unicore@localhost:5433/unicore
+    Developer convenience target only. Update the URI to match.
+
+  NOTE: docker-compose.yml also embeds the username and dbname in the
+  healthcheck command (line 15):
+    pg_isready -U unicore -d unicore
+  Update these to match POSTGRES_USER and POSTGRES_DB if you change them.
+
+  NOTE: Makefile line 20 hardcodes the container name in the readiness poll:
+    docker exec unicore-mock-source pg_isready -U unicore -d unicore
+  If you change `container_name` in docker-compose.yml, update this line too.
+
+
+4b. SCHEMA NAMES
+----------------
+
+  Analytics base schema       default: unicore_analytics
+    profiles.yml (line 11):   schema: unicore_analytics
+    app/db.py (line 6):       SOURCES = "unicore_analytics"
+    These must always match. The dbt base schema is set in profiles.yml; the
+    Python constant in app/db.py must be updated to match manually.
+
+  Analytics marts schema      default: unicore_analytics_marts
+    app/db.py (line 5):       MARTS = "unicore_analytics_marts"
+    This value is DERIVED automatically by dbt: it is the base schema (above)
+    with "_marts" appended, controlled by macros/generate_schema_name.sql.
+    If you change the base schema in profiles.yml, update this constant to
+    <new_base_schema>_marts.
+
+  Schema name derivation rule (macros/generate_schema_name.sql):
+    source models  →  profiles.yml schema             (e.g. unicore_analytics)
+    mart models    →  profiles.yml schema + "_marts"  (e.g. unicore_analytics_marts)
+    seeds          →  profiles.yml schema             (e.g. unicore_analytics)
+
+  ERP source database name    default: unicore
+    models/sources/_sources.yml (lines 5, 27, 45):   database: unicore
+    Three source blocks (asset_svc, finance_svc, reference_svc) each declare
+    the database name where dbt should look for source tables. This must match
+    the actual database name of the ERP Postgres instance being read from.
+
+  ERP source schema names     default: asset_svc, finance_svc, reference_svc
+    models/sources/_sources.yml (lines 6, 28, 46)
+    docker/init/01-schemas.sql (CREATE SCHEMA statements)
+    docker/init/02-asset-svc.sql (SET search_path = asset_svc)
+    docker/init/03-finance-svc.sql (SET search_path = finance_svc)
+    docker/init/04-reference-svc.sql (SET search_path = reference_svc)
+    These are the stable interface contract with the ERP services and are
+    unlikely to change. If the ERP teams rename their schemas, all five
+    locations above must be updated, plus every {{ source('asset_svc', ...) }}
+    and {{ source('finance_svc', ...) }} reference in the source SQL models.
+
+
+4c. DBT PROFILES FILE LOCATION
+-------------------------------
+
+  profiles.yml lives in the project root (non-standard dbt convention).
+  The Makefile sets DBT_PROFILES_DIR=. before every dbt invocation (line 3):
+    DBT := DBT_PROFILES_DIR=. $(VENV)/dbt
+
+  If you run dbt commands directly outside the Makefile, set:
+    export DBT_PROFILES_DIR=.
+  or copy profiles.yml to ~/.dbt/profiles.yml.
+
+
+4d. PYTHON VIRTUALENV PATH
+--------------------------
+
+  The Makefile assumes the virtualenv is at .venv/ relative to the project
+  root (line 2):
+    VENV := .venv/bin
+
+  If you use a different virtualenv location or tool (e.g. pyenv, conda,
+  poetry), update VENV in the Makefile or invoke dbt and Python directly.
+
+
+4e. STREAMLIT PORT
+------------------
+
+  Streamlit defaults to port 8501. This is not hardcoded anywhere in the
+  project. To use a different port:
+    streamlit run app/app.py --server.port 8888
+  No source files need to change.
+
+
+4f. DBT THREADS
+---------------
+
+  profiles.yml (line 12):  threads: 4
+  Controls the number of parallel dbt model executions. Reduce on machines
+  with fewer cores or restrictive DB connection limits.
+
+
+--------------------------------------------------------------------------------
+5. PYTHON RUNTIME AND DEPENDENCIES
+--------------------------------------------------------------------------------
+
+  Python version:   3.12  (pinned in .mise.toml)
+
+  Key dependencies (from requirements.txt):
+    dbt-core==1.9.0
+    dbt-postgres==1.9.0
+    streamlit==1.45.0
+    pandas==2.2.3
+    sqlalchemy==2.0.40
+    plotly==5.22.0
+    psycopg2-binary==2.9.10
+    faker==37.1.0            (dev/demo only — used by seed_source.py)
+
+  All versions are pinned. Do not upgrade without testing — dbt minor versions
+  frequently contain breaking changes to model materialisation and source
+  resolution behaviour.
+
+
+--------------------------------------------------------------------------------
+6. NOTES ON PRODUCTION DEPLOYMENT
+--------------------------------------------------------------------------------
+
+  Credentials in plaintext
+    profiles.yml contains a plaintext database password. For any shared or
+    production environment, replace the literal with dbt's env_var syntax:
+      password: "{{ env_var('DBT_DB_PASSWORD') }}"
+    Similarly, the connection string in app/db.py and the DB dict in
+    scripts/seed_source.py should read from environment variables rather than
+    hardcoded literals. Do not commit production credentials to the repository.
+
+  Mock source vs. production ERP
+    docker-compose.yml and scripts/seed_source.py are for development and
+    demo only. In production:
+      - The ERP Postgres databases (asset_svc, finance_svc, reference_svc
+        schemas) are provided by the running UniCore ERP services.
+      - The analytics Postgres (where dbt writes its output) is a separate
+        database provisioned for the data platform.
+      - Only profiles.yml and app/db.py need to point at the analytics DB.
+      - The ERP source connection is declared in models/sources/_sources.yml.
+
+  Oracle target
+    Production runs on Oracle, not Postgres. dbt-oracle (not included in
+    requirements.txt) is required. In profiles.yml, change:
+      type: postgres  →  type: oracle
+    and supply the Oracle-specific connection parameters (service_name, etc.).
+    NOTE: models/marts/DPRJ/DPRJ_T.sql uses the Postgres-specific
+    generate_series function and must be rewritten for Oracle before production
+    deployment. All other models use standard SQL compatible with both engines.
+
+  Streamlit in production
+    The app is a single-user development tool by default. For multi-user
+    production deployment consider:
+      - Running behind a reverse proxy (nginx, Caddy)
+      - Streamlit Community Cloud or a containerised deployment
+      - Setting server options via environment variables or a
+        .streamlit/config.toml file (STREAMLIT_SERVER_PORT, etc.)
+
+  .user.yml
+    This file (project root, gitignored) is generated by dbt and contains a
+    machine-local anonymous user ID. It is safe to ignore or delete; dbt will
+    regenerate it on first run.
+
+
+--------------------------------------------------------------------------------
+7. QUICK REFERENCE — ALL ENVIRONMENT-SENSITIVE FILES
+--------------------------------------------------------------------------------
+
+  File                                  What it controls
+  ------------------------------------  ----------------------------------------
+  profiles.yml                          dbt DB connection: host, port, user,
+                                        password, dbname, schema, threads
+  app/db.py                             Streamlit DB connection string and schema
+                                        name constants (lines 5, 6, 12)
+  scripts/seed_source.py                Seeder DB connection dict (line 16)
+  docker-compose.yml                    Mock container: DB name, user, password,
+                                        host port, healthcheck credentials
+  Makefile                              psql URI (line 39), container name in
+                                        readiness poll (line 20), virtualenv
+                                        path (line 2), DBT_PROFILES_DIR (line 3)
+  models/sources/_sources.yml          Source database name (lines 5, 27, 45)
+                                        and source schema names (lines 6, 28, 46)
+  docker/init/01-schemas.sql            Schema names created at container init
+  docker/init/02-asset-svc.sql          search_path for asset_svc DDL
+  docker/init/03-finance-svc.sql        search_path for finance_svc DDL
+  docker/init/04-reference-svc.sql      search_path for reference_svc DDL
+  .mise.toml                            Python version (3.12)
+  dbt_project.yml                       dbt schema suffixes (source: "",
+                                        marts: "marts") — change only if
+                                        restructuring the schema layout
+  macros/generate_schema_name.sql       Schema derivation logic — change only
+                                        if restructuring the schema layout
+  requirements.txt                      Pinned dependency versions
+
+================================================================================
