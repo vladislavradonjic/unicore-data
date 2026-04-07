@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: MOVE_T
+    description: >
+      Asset movement history (Kretanje OS) — full assignment history with
+      before/after state derived via LAG window function. One row per assignment
+      period; the first assignment has NULL prev_* columns (movement_type = INITIAL_ASSIGNMENT).
+    columns:
+      - name: assignment_id
+        tests: [not_null, unique]
+      - name: asset_id
+        tests: [not_null]
+      - name: movement_type
+        tests: [not_null]
+      - name: business_ts
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]
+
+  - name: MOVE_t1_T
+    description: T-1 output port for MOVE.
+    columns:
+      - name: assignment_id
+        tests: [not_null, unique]
+
+  - name: MOVE_m1_T
+    description: M-1 output port for MOVE.
+    columns:
+      - name: assignment_id
+        tests: [not_null, unique]

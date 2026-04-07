@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: KART_T
+    description: >
+      Asset card (Kartica OS) — chronological event history per asset.
+      Union of four event types: ACTIVATION, DISPOSAL, LOCATION_CHANGE / CUSTODIAN_CHANGE
+      (from MOVE_T), and DEPRECIATION (from AMRT_T). No output ports; consumers
+      query with WHERE asset_id = :id ordered by event_date.
+    columns:
+      - name: asset_id
+        tests: [not_null]
+      - name: event_type
+        tests: [not_null]
+      - name: event_date
+        tests: [not_null]
+      - name: business_ts
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]

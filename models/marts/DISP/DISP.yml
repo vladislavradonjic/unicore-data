@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: DISP_T
+    description: >
+      Disposal register (Registar otpisa) — disposed, sold, and donated assets
+      enriched with the operation request and workflow case that authorised the disposal.
+      One row per asset (left joins preserve assets even when request/workflow data is absent).
+    columns:
+      - name: asset_id
+        tests: [not_null, unique]
+      - name: lifecycle_status
+        tests: [not_null]
+      - name: business_ts
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]
+
+  - name: DISP_t1_T
+    description: T-1 output port for DISP.
+    columns:
+      - name: asset_id
+        tests: [not_null, unique]
+
+  - name: DISP_m1_T
+    description: M-1 output port for DISP.
+    columns:
+      - name: asset_id
+        tests: [not_null, unique]

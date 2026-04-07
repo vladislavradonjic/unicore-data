@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: DPRJ_T
+    description: >
+      Depreciation projection (Projekcija amortizacije) — forward-looking 36-month
+      projection per active asset with remaining book value. Uses Postgres generate_series.
+      One row per (asset, projected_period_code). Excludes fully-depreciated assets
+      and periods beyond the asset's depreciation horizon. No output ports.
+    columns:
+      - name: asset_id
+        tests: [not_null]
+      - name: projected_period_code
+        tests: [not_null]
+      - name: monthly_depreciation_amount
+        tests: [not_null]
+      - name: projected_net_amount
+        tests: [not_null]
+      - name: projection_base_date
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]

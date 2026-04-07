@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: AMRT_T
+    description: >
+      Depreciation schedule (Amortizacija) — one row per (asset, period),
+      enriched with asset details, category, and period dates.
+      Includes cumulative depreciation calculated via window function.
+    columns:
+      - name: run_item_id
+        tests: [not_null, unique]
+      - name: asset_id
+        tests: [not_null]
+      - name: period_code
+        tests: [not_null]
+      - name: depreciation_amount
+        tests: [not_null]
+      - name: business_ts
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]
+
+  - name: AMRT_t1_T
+    description: T-1 output port for AMRT.
+    columns:
+      - name: run_item_id
+        tests: [not_null, unique]
+
+  - name: AMRT_m1_T
+    description: M-1 output port for AMRT.
+    columns:
+      - name: run_item_id
+        tests: [not_null, unique]

@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: CCDA_T
+    description: >
+      Cost centre depreciation allocation (Amortizacija po centrima troška) —
+      depreciation amounts aggregated by (cost_center × category × period).
+      Temporal join matches each depreciation item to the assignment active at
+      the start of that period (effective_from <= period_starts_on).
+    columns:
+      - name: period_code
+        tests: [not_null]
+      - name: cost_center_code
+        tests: [not_null]
+      - name: total_depreciation_amount
+        tests: [not_null]
+      - name: business_ts
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]
+
+  - name: CCDA_t1_T
+    description: T-1 output port for CCDA.
+
+  - name: CCDA_m1_T
+    description: M-1 output port for CCDA.
