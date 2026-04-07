@@ -5,18 +5,59 @@ models:
     description: >
       Source data product — asset assignments (location, cost centre, custodian).
       SCD-style history; one row per assignment record per load.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - asset_svc.asset_assignment
+        output_ports:
+          - name: ASGN_t1_T
+            description: >
+              T-1 snapshot. All assignment records deduplicated across loads, valid as
+              of the previous business day. Full assignment history is preserved (not
+              just the current assignment). Used by ABOS, CCDA, and MOVE mart builds.
+          - name: ASGN_m1_T
+            description: >
+              M-1 snapshot. Same deduplication logic applied to records valid as of
+              the last calendar day of the previous month.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: assignment_id
+        description: Surrogate PK from asset_svc.asset_assignment
         tests: [not_null]
       - name: asset_id
+        description: Foreign key to ASST; the asset being assigned
         tests: [not_null]
       - name: effective_from
         description: Date from which this assignment is valid
         tests: [not_null]
+      - name: effective_to
+        description: Date until which this assignment is valid; null means currently active
+      - name: location_code
+        description: Location where the asset is physically placed
+      - name: cost_center_code
+        description: Cost centre that bears the asset's depreciation charge
+      - name: organization_unit_code
+        description: Organisational unit responsible for the asset
+      - name: accountable_person_id
+        description: Person responsible (računopolagač) for this assignment period
       - name: business_ts
+        description: effective_from of the assignment
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was loaded into the platform
         tests: [not_null]
+      - name: deleted_flag
+        description: "'true' if the source record was absent at load time"
 
   - name: ASGN_t1_T
     description: >

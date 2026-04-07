@@ -3,17 +3,96 @@ version: 2
 models:
   - name: DISP_T
     description: >
-      Disposal register (Registar otpisa) — disposed, sold, and donated assets
-      enriched with the operation request and workflow case that authorised the disposal.
-      One row per asset (left joins preserve assets even when request/workflow data is absent).
+      Consumer data product — Disposal register (Registar otpisa). Disposed, sold,
+      and donated assets enriched with the operation request and workflow case that
+      authorised the disposal. One row per asset; left joins preserve assets even
+      when request or workflow data is absent. Primary source for the Otpis dashboard.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - ASST_t1_T
+          - ASOP_t1_T
+          - WFCS_t1_T
+          - REFD_CAT_V
+        output_ports:
+          - name: DISP_t1_T
+            description: >
+              T-1 snapshot. One row per disposed/sold/donated asset as of the
+              previous business day. Used directly by the Otpis dashboard.
+          - name: DISP_m1_T
+            description: >
+              M-1 snapshot. One row per disposed asset as of the last calendar day
+              of the previous month. Used for month-end disposal reporting.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: asset_id
+        description: Surrogate PK; one row per disposed asset
         tests: [not_null, unique]
+      - name: asset_number
+        description: Human-readable inventory number
+      - name: asset_name
+        description: Full descriptive name of the asset
+      - name: asset_type
+        description: "OS | NU | IN | ULOZENA — asset classification"
+      - name: category_code
+        description: Asset category code
+      - name: category_name
+        description: Human-readable category name joined from REFD_CAT_V
       - name: lifecycle_status
-        tests: [not_null]
+        description: "DISPOSED | SOLD | DONATED"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [DISPOSED, SOLD, DONATED]
+      - name: activation_date
+        description: Date the asset was originally activated
+      - name: acquisition_amount
+        description: Original purchase value (NV — nabavna vrednost)
+      - name: gross_amount
+        description: Gross carrying amount at time of disposal
+      - name: accumulated_depreciation
+        description: Total depreciation charged up to disposal
+      - name: net_book_value_at_disposal
+        description: Net book value (SV) at the time of disposal
+      - name: request_id
+        description: FK to the disposal operation request; may be null if request data is absent
+      - name: request_number
+        description: Human-readable request identifier
+      - name: disposal_type
+        description: Operation type from the request; should equal DISPOSAL
+      - name: disposal_date
+        description: Requested effective date of the disposal
+      - name: requested_by
+        description: Username of the person who submitted the disposal request (maker)
+      - name: verified_by
+        description: Username of the approver (checker); null if not yet approved
+      - name: verified_at
+        description: Timestamp of approval
+      - name: case_id
+        description: FK to the workflow case; may be null if workflow data is absent
+      - name: case_number
+        description: Human-readable workflow case identifier
+      - name: workflow_status
+        description: "PENDING | APPROVED | REJECTED — approval state of the disposal"
+      - name: maker_username
+        description: Four-eyes maker username from the workflow case
+      - name: checker_username
+        description: Four-eyes checker username from the workflow case; null if pending
       - name: business_ts
+        description: Effective date of the disposal or asset business_ts if request is absent
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was built
         tests: [not_null]
 
   - name: DISP_t1_T

@@ -3,19 +3,71 @@ version: 2
 models:
   - name: MOVE_T
     description: >
-      Asset movement history (Kretanje OS) — full assignment history with
-      before/after state derived via LAG window function. One row per assignment
-      period; the first assignment has NULL prev_* columns (movement_type = INITIAL_ASSIGNMENT).
+      Consumer data product — Asset movement history (Kretanje OS). Full assignment
+      history with before/after state derived via LAG window function. One row per
+      assignment period; the first assignment has NULL prev_* columns
+      (movement_type = INITIAL_ASSIGNMENT). Used as input to KART event history.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - ASGN_t1_T
+          - ASST_t1_T
+          - REFD_LOC_V
+          - REFD_CC_V
+        output_ports:
+          - name: MOVE_t1_T
+            description: >
+              T-1 snapshot. One row per assignment as of the previous business day.
+              Preserves the full movement history including the initial assignment.
+          - name: MOVE_m1_T
+            description: >
+              M-1 snapshot. One row per assignment as of the last calendar day of
+              the previous month.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: assignment_id
+        description: Surrogate PK; one row per assignment period
         tests: [not_null, unique]
       - name: asset_id
+        description: FK to ASST; the asset being tracked
         tests: [not_null]
       - name: movement_type
-        tests: [not_null]
+        description: "INITIAL_ASSIGNMENT | LOCATION_CHANGE | CUSTODIAN_CHANGE"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [INITIAL_ASSIGNMENT, LOCATION_CHANGE, CUSTODIAN_CHANGE]
+      - name: effective_from
+        description: Date this assignment became active
+      - name: effective_to
+        description: Date this assignment ended; null if currently active
+      - name: location_code
+        description: Location in this assignment period
+      - name: location_name
+        description: Human-readable location name joined from REFD_LOC_V
+      - name: cost_center_code
+        description: Cost centre in this assignment period
+      - name: prev_location_code
+        description: Location in the preceding assignment; null for INITIAL_ASSIGNMENT
+      - name: prev_location_name
+        description: Human-readable previous location name
+      - name: prev_cost_center_code
+        description: Cost centre in the preceding assignment; null for INITIAL_ASSIGNMENT
       - name: business_ts
+        description: effective_from of the assignment
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was built
         tests: [not_null]
 
   - name: MOVE_t1_T

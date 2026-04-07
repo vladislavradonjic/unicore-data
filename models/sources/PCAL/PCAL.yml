@@ -2,17 +2,64 @@ version: 2
 
 models:
   - name: PCAL_T
-    description: Source data product — fiscal period calendar.
+    description: >
+      Source data product — fiscal period calendar. Defines the official accounting
+      periods used across all depreciation runs and financial reporting. Append-only;
+      new periods are added as the fiscal year progresses.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - finance_svc.period_calendar
+        output_ports:
+          - name: PCAL_t1_T
+            description: >
+              T-1 snapshot. One row per fiscal period as of the previous business day.
+              Referenced by AMRT, CCDA, and AMRC mart builds to enrich depreciation
+              items with period dates and fiscal year/period numbers.
+          - name: PCAL_m1_T
+            description: >
+              M-1 snapshot. One row per fiscal period as of the last calendar day of
+              the previous month.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: period_id
+        description: Surrogate PK from finance_svc.period_calendar
         tests: [not_null]
       - name: period_code
-        description: Period identifier (e.g. 2024-03)
+        description: Period identifier in YYYY-MM format (e.g. 2024-03)
         tests: [not_null]
+      - name: fiscal_year
+        description: Fiscal year the period belongs to (e.g. 2024)
+        tests: [not_null]
+      - name: fiscal_period
+        description: Period number within the fiscal year (1–12)
+        tests: [not_null]
+      - name: starts_on
+        description: First calendar day of the period
+        tests: [not_null]
+      - name: ends_on
+        description: Last calendar day of the period
+        tests: [not_null]
+      - name: period_status
+        description: "OPEN | CLOSED — whether the period accepts new postings"
       - name: business_ts
+        description: starts_on of the period
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was loaded into the platform
         tests: [not_null]
+      - name: deleted_flag
+        description: "'true' if the source record was absent at load time"
 
   - name: PCAL_t1_T
     description: T-1 output port for PCAL.

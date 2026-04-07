@@ -2,18 +2,64 @@ version: 2
 
 models:
   - name: ASOP_T
-    description: Source data product — asset operation requests (activations, disposals, transfers).
+    description: >
+      Source data product — asset operation requests (activations, disposals, transfers).
+      Records the formal request lifecycle: creation, verification (maker-checker),
+      and effective execution date.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - asset_svc.asset_operation_request
+        output_ports:
+          - name: ASOP_t1_T
+            description: >
+              T-1 snapshot. One row per operation request as of the previous business
+              day. Consumed by DISP (disposal register) and KART (asset card event
+              history) mart builds.
+          - name: ASOP_m1_T
+            description: >
+              M-1 snapshot. One row per operation request as of the last calendar day
+              of the previous month.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: request_id
+        description: Surrogate PK from asset_svc.asset_operation_request
         tests: [not_null]
       - name: request_number
+        description: Human-readable request identifier (e.g. REQ-000001)
+        tests: [not_null]
+      - name: asset_id
+        description: Foreign key to ASST; the asset the request concerns
         tests: [not_null]
       - name: operation_type
+        description: "ACTIVATION | DISPOSAL | LOCATION_CHANGE | CUSTODIAN_CHANGE"
         tests: [not_null]
+      - name: requested_effective_date
+        description: Date the operation should take effect (e.g. activation or disposal date)
+      - name: created_by
+        description: Username of the person who submitted the request (maker)
+      - name: verified_by
+        description: Username of the person who approved the request (checker); null if pending
+      - name: verified_at
+        description: Timestamp of approval; null if pending
       - name: business_ts
+        description: requested_effective_date of the operation
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was loaded into the platform
         tests: [not_null]
+      - name: deleted_flag
+        description: "'true' if the source record was absent at load time"
 
   - name: ASOP_t1_T
     description: T-1 output port for ASOP.

@@ -3,21 +3,83 @@ version: 2
 models:
   - name: AMRT_T
     description: >
-      Depreciation schedule (Amortizacija) — one row per (asset, period),
-      enriched with asset details, category, and period dates.
-      Includes cumulative depreciation calculated via window function.
+      Consumer data product — Depreciation schedule (Amortizacija). One row per
+      (asset, period), enriched with asset details, category, period dates, and a
+      running cumulative depreciation window. Primary source for the Amortizacija
+      dashboard and for AMRC reconciliation and KART asset card event history.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - DEPR_t1_T
+          - ASST_t1_T
+          - PCAL_t1_T
+          - REFD_CAT_V
+        output_ports:
+          - name: AMRT_t1_T
+            description: >
+              T-1 snapshot. One row per run item (asset × period) as of the previous
+              business day. Used directly by the Amortizacija dashboard and as input
+              to AMRC reconciliation.
+          - name: AMRT_m1_T
+            description: >
+              M-1 snapshot. One row per run item as of the last calendar day of the
+              previous month. Used for month-end depreciation summaries.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: run_item_id
+        description: Surrogate PK; one row per (asset, period)
         tests: [not_null, unique]
       - name: asset_id
+        description: FK to ASST; the asset being depreciated
         tests: [not_null]
+      - name: asset_number
+        description: Human-readable inventory number
+      - name: asset_name
+        description: Full descriptive name of the asset
+      - name: asset_type
+        description: "OS | NU | IN | ULOZENA — asset classification"
+      - name: category_code
+        description: Asset category code
+      - name: category_name
+        description: Human-readable category name
       - name: period_code
+        description: Fiscal period code (e.g. 2024-03)
         tests: [not_null]
+      - name: fiscal_year
+        description: Fiscal year of the period
+      - name: fiscal_period
+        description: Period number within the fiscal year (1–12)
+      - name: period_starts_on
+        description: First calendar day of the depreciation period
+      - name: period_ends_on
+        description: Last calendar day of the depreciation period
       - name: depreciation_amount
+        description: Depreciation charge for this asset in this period
         tests: [not_null]
+      - name: cumulative_depreciation
+        description: >
+          Running total of depreciation charged to this asset from the first period
+          up to and including the current period; calculated via window function
+          ordered by period_code.
+      - name: run_number
+        description: Identifier of the depreciation run that produced this item
+      - name: initiated_by
+        description: Username of the person who initiated the depreciation run
       - name: business_ts
+        description: Date the depreciation run was completed
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was built
         tests: [not_null]
 
   - name: AMRT_t1_T

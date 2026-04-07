@@ -3,18 +3,71 @@ version: 2
 models:
   - name: KART_T
     description: >
-      Asset card (Kartica OS) — chronological event history per asset.
-      Union of four event types: ACTIVATION, DISPOSAL, LOCATION_CHANGE / CUSTODIAN_CHANGE
-      (from MOVE_T), and DEPRECIATION (from AMRT_T). No output ports; consumers
-      query with WHERE asset_id = :id ordered by event_date.
+      Consumer data product — Asset card (Kartica OS). Chronological event history
+      per asset. Union of four event types: ACTIVATION, DISPOSAL,
+      LOCATION_CHANGE / CUSTODIAN_CHANGE (from MOVE_T), and DEPRECIATION (from
+      AMRT_T). No output ports; consumers filter by asset_id and order by event_date.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - ASST_t1_T
+          - ASOP_t1_T
+          - MOVE_T
+          - AMRT_T
+        output_ports: []
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: asset_id
+        description: FK to ASST; all events for a given asset share this key
         tests: [not_null]
+      - name: asset_number
+        description: Human-readable inventory number
+      - name: asset_name
+        description: Full descriptive name of the asset
+      - name: asset_type
+        description: "OS | NU | IN | ULOZENA — asset classification"
+      - name: category_code
+        description: Asset category code
       - name: event_type
-        tests: [not_null]
+        description: "ACTIVATION | DISPOSAL | LOCATION_CHANGE | CUSTODIAN_CHANGE | DEPRECIATION"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [ACTIVATION, DISPOSAL, LOCATION_CHANGE, CUSTODIAN_CHANGE, DEPRECIATION]
       - name: event_date
+        description: Effective date of the event
         tests: [not_null]
+      - name: reference_number
+        description: >
+          Identifying reference for the event source: request_number for
+          ACTIVATION/DISPOSAL, assignment_id for movement events, run_number for
+          DEPRECIATION.
+      - name: actor
+        description: Username of the person who initiated the event; null for movement events
+      - name: from_value
+        description: >
+          Previous value before the event; populated for movement events (prev_location_code)
+          and null for others.
+      - name: to_value
+        description: >
+          New value after the event; location_code for movement events,
+          depreciation_amount (as text) for DEPRECIATION, null for others.
+      - name: note
+        description: >
+          Additional context; period_code for DEPRECIATION events, null for others.
       - name: business_ts
+        description: Effective date of the source record
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was built
         tests: [not_null]

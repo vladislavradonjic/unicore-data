@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: AMRC_T
+    description: >
+      Consumer data product — Depreciation reconciliation (Kontrola obračuna
+      amortizacije). Platform-independent recalculation of straight-line depreciation
+      joined to the ERP-sourced AMRT_t1_T. Exposes variance and reconciliation_status
+      per (asset, period). Use for audit and data quality monitoring. No output ports;
+      consumers query AMRC_T directly.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - ASST_t1_T
+          - ASOP_t1_T
+          - PCAL_t1_T
+          - AMRT_t1_T
+        output_ports: []
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
+    columns:
+      - name: asset_id
+        description: FK to ASST; the asset under reconciliation
+        tests: [not_null]
+      - name: asset_number
+        description: Human-readable inventory number
+      - name: category_code
+        description: Asset category code
+      - name: period_code
+        description: Fiscal period being reconciled (e.g. 2024-03)
+        tests: [not_null]
+      - name: calculated_amount
+        description: >
+          Platform-independent recalculation: gross_amount × depreciation_rate / 100 / 12,
+          rounded to 2 decimal places. Used as the reference value for comparison.
+        tests: [not_null]
+      - name: erp_amount
+        description: >
+          Depreciation amount recorded in the ERP depreciation run (from AMRT_t1_T);
+          null if the ERP has no record for this (asset, period) combination.
+      - name: variance
+        description: >
+          calculated_amount − erp_amount. Zero for MATCH records; non-zero for
+          MISMATCH; null for ERP_MISSING.
+      - name: reconciliation_status
+        description: "MATCH | MISMATCH | ERP_MISSING"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [MATCH, MISMATCH, ERP_MISSING]
+      - name: technical_ts
+        description: Timestamp when this row was built
+        tests: [not_null]

@@ -3,20 +3,75 @@ version: 2
 models:
   - name: CCDA_T
     description: >
-      Cost centre depreciation allocation (Amortizacija po centrima troška) —
-      depreciation amounts aggregated by (cost_center × category × period).
-      Temporal join matches each depreciation item to the assignment active at
-      the start of that period (effective_from <= period_starts_on).
+      Consumer data product — Cost centre depreciation allocation (Amortizacija po
+      centrima troška). Depreciation amounts aggregated by (cost_center × category ×
+      period). A temporal join matches each depreciation run item to the assignment
+      that was active at the start of that period
+      (effective_from <= period_starts_on). Primary source for the Centri troška
+      dashboard.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - DEPR_t1_T
+          - PCAL_t1_T
+          - ASGN_t1_T
+          - ASST_t1_T
+          - REFD_CC_V
+          - REFD_CAT_V
+        output_ports:
+          - name: CCDA_t1_T
+            description: >
+              T-1 snapshot. One row per (cost_center, category, period) as of the
+              previous business day. Used directly by the Centri troška dashboard.
+          - name: CCDA_m1_T
+            description: >
+              M-1 snapshot. One row per (cost_center, category, period) as of the
+              last calendar day of the previous month. Used for month-end cost
+              centre reporting.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: period_code
+        description: Fiscal period code (e.g. 2024-03)
         tests: [not_null]
+      - name: fiscal_year
+        description: Fiscal year of the period
+      - name: fiscal_period
+        description: Period number within the fiscal year (1–12)
+      - name: period_starts_on
+        description: First calendar day of the period; used as the temporal join anchor
+      - name: period_ends_on
+        description: Last calendar day of the period
       - name: cost_center_code
+        description: Cost centre that bore the depreciation charge during this period
         tests: [not_null]
+      - name: cost_center_name
+        description: Human-readable cost centre name joined from REFD_CC_V
+      - name: organization_unit_code
+        description: Organisational unit the cost centre belongs to
+      - name: category_code
+        description: Asset category code
+      - name: category_name
+        description: Human-readable category name joined from REFD_CAT_V
+      - name: asset_count
+        description: Number of distinct assets contributing to the depreciation total in this row
       - name: total_depreciation_amount
+        description: Sum of depreciation charges for all matching assets in this (cost_center, category, period)
         tests: [not_null]
       - name: business_ts
+        description: Maximum business_ts of the contributing depreciation run items
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was built
         tests: [not_null]
 
   - name: CCDA_t1_T

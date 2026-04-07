@@ -3,19 +3,78 @@ version: 2
 models:
   - name: ABOS_T
     description: >
-      Asset base (Baza OS) — all assets enriched with current assignment,
-      category reference data, location and cost centre names. Built from
-      t-1 output ports; one row per asset.
+      Consumer data product — Asset base (Baza OS). All assets enriched with their
+      current assignment, category reference data, location and cost centre names.
+      Built from t-1 output ports; one row per asset. Primary source for the
+      Baza OS dashboard and as a lookup for other mart builds.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - ASST_t1_T
+          - ASGN_t1_T
+          - REFD_CAT_V
+          - REFD_LOC_V
+          - REFD_CC_V
+        output_ports:
+          - name: ABOS_t1_T
+            description: >
+              T-1 snapshot. One row per asset. The primary consumer-facing interface
+              for the asset register; used directly by the Baza OS dashboard and as
+              an enriched asset lookup by DPRJ, KART, and DISP.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: asset_id
+        description: Surrogate PK; one row per asset
         tests: [not_null, unique]
       - name: asset_number
+        description: Human-readable inventory number (e.g. OS-000001)
         tests: [not_null]
+      - name: asset_name
+        description: Full descriptive name of the asset
+      - name: asset_type
+        description: "OS | NU | IN | ULOZENA — asset classification"
+      - name: category_code
+        description: Asset category code from REFD_CAT_V
+      - name: category_name
+        description: Human-readable category name joined from REFD_CAT_V
       - name: lifecycle_status
+        description: "ACTIVE | IN_PREPARATION | DISPOSED | SOLD | DONATED"
         tests: [not_null]
+      - name: activation_date
+        description: Date the asset was formally activated
+      - name: acquisition_amount
+        description: Original purchase value (NV — nabavna vrednost)
+      - name: gross_amount
+        description: Gross carrying amount
+      - name: accumulated_depreciation
+        description: Total depreciation charged to date
+      - name: net_amount
+        description: Current net book value (SV — sadašnja vrednost)
+      - name: location_code
+        description: Location code from the current assignment
+      - name: location_name
+        description: Human-readable location name joined from REFD_LOC_V
+      - name: cost_center_code
+        description: Cost centre code from the current assignment
+      - name: cost_center_name
+        description: Human-readable cost centre name joined from REFD_CC_V
+      - name: accountable_person_name
+        description: Name of the person responsible (računopolagač) from the current assignment
       - name: business_ts
+        description: activation_date if available, else asset creation date
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was built
         tests: [not_null]
 
   - name: ABOS_t1_T

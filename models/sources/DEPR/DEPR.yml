@@ -5,23 +5,61 @@ models:
     description: >
       Source data product — depreciation run items with run header joined in.
       One row per asset per depreciation period per load; insert-only, bi-temporal.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - finance_svc.depreciation_run_item
+          - finance_svc.depreciation_run
+        output_ports:
+          - name: DEPR_t1_T
+            description: >
+              T-1 snapshot. One row per run item (asset × period) as of the previous
+              business day. Consumed by AMRT and CCDA mart builds.
+          - name: DEPR_m1_T
+            description: >
+              M-1 snapshot. One row per run item as of the last calendar day of the
+              previous month. Used for month-end depreciation reporting.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: run_item_id
         description: Surrogate PK from finance_svc.depreciation_run_item
         tests: [not_null]
+      - name: run_id
+        description: FK to the parent depreciation run; groups all items in a single batch
+        tests: [not_null]
+      - name: run_number
+        description: Human-readable run identifier (e.g. RUN-2024-03)
       - name: period_code
         description: Fiscal period code (e.g. 2024-03)
         tests: [not_null]
       - name: asset_id
+        description: FK to ASST; the asset being depreciated
         tests: [not_null]
       - name: depreciation_amount
         description: Monthly depreciation charge for this asset in this period
         tests: [not_null]
+      - name: run_status
+        description: "COMPLETED | REVERSED — status of the parent run"
+      - name: initiated_by
+        description: Username of the person who initiated the depreciation run
       - name: business_ts
         description: Date the depreciation run was completed
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was loaded into the platform
         tests: [not_null]
+      - name: deleted_flag
+        description: "'true' if the source record was absent at load time"
 
   - name: DEPR_t1_T
     description: T-1 output port for DEPR. One row per run item as of previous business day.

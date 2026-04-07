@@ -3,20 +3,64 @@ version: 2
 models:
   - name: DPRJ_T
     description: >
-      Depreciation projection (Projekcija amortizacije) — forward-looking 36-month
-      projection per active asset with remaining book value. Uses Postgres generate_series.
-      One row per (asset, projected_period_code). Excludes fully-depreciated assets
-      and periods beyond the asset's depreciation horizon. No output ports.
+      Consumer data product — Depreciation projection (Projekcija amortizacije).
+      Forward-looking 36-month projection per active asset with remaining book value.
+      Uses Postgres generate_series (not Oracle-portable). One row per
+      (asset, projected_period_code). Excludes fully-depreciated assets and periods
+      beyond the asset's depreciation horizon. No output ports; consumers query
+      DPRJ_T directly.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - ASST_t1_T
+        output_ports: []
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: asset_id
+        description: FK to ASST; the asset being projected
         tests: [not_null]
+      - name: asset_number
+        description: Human-readable inventory number
+      - name: asset_name
+        description: Full descriptive name of the asset
+      - name: asset_type
+        description: "OS | NU | IN | ULOZENA — asset classification"
+      - name: category_code
+        description: Asset category code
       - name: projected_period_code
+        description: Projected fiscal period in YYYY-MM format
         tests: [not_null]
+      - name: proj_month_start
+        description: First calendar day of the projected period
+      - name: months_from_today
+        description: Number of months between the projection base date and this period
       - name: monthly_depreciation_amount
+        description: >
+          Projected depreciation charge for this period: gross_amount × rate / 100 / 12,
+          rounded to 2 decimal places. Constant across periods for straight-line assets.
         tests: [not_null]
+      - name: net_amount_today
+        description: Net book value of the asset as of the projection base date
+      - name: accumulated_depreciation_today
+        description: Accumulated depreciation as of the projection base date
       - name: projected_net_amount
+        description: >
+          Estimated net book value at end of the projected period; floored at zero.
+          Calculated as net_amount_today minus monthly_depreciation_amount × months_from_today.
         tests: [not_null]
       - name: projection_base_date
+        description: The date on which the projection was calculated (current_date at build time)
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was built
         tests: [not_null]

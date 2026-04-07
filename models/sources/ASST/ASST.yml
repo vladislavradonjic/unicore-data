@@ -6,6 +6,33 @@ models:
       Source data product — assets with current book state joined in.
       One row per asset per load; insert-only, bi-temporal.
       Joins asset_svc.asset with the open asset_book_state record (effective_to is null).
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - asset_svc.asset
+          - asset_svc.asset_book_state
+        output_ports:
+          - name: ASST_t1_T
+            description: >
+              T-1 snapshot. One row per asset reflecting the latest known state as of
+              the previous business day. Primary interface for all downstream mart
+              builds and the Baza OS dashboard.
+          - name: ASST_m1_T
+            description: >
+              M-1 snapshot. One row per asset as of the last calendar day of the
+              previous month. Used for month-end reporting and balance sheet
+              reconciliation.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: asset_id
         description: Surrogate PK from asset_svc.asset
@@ -13,12 +40,30 @@ models:
       - name: asset_number
         description: Human-readable inventory number (e.g. OS-000001)
         tests: [not_null]
+      - name: asset_name
+        description: Full descriptive name of the asset
+      - name: asset_type
+        description: "OS | NU | IN | ULOZENA — asset classification"
+      - name: category_code
+        description: Reference to asset category (depreciation rate, GL accounts)
       - name: lifecycle_status
         description: "ACTIVE | IN_PREPARATION | DISPOSED | SOLD | DONATED"
         tests: [not_null]
+      - name: activation_date
+        description: Date the asset was formally activated (placed in use)
+      - name: depreciation_start_date
+        description: Date from which depreciation is calculated; may differ from activation_date
+      - name: depreciation_rate
+        description: Annual straight-line depreciation rate (%)
+      - name: currency_code
+        description: Currency of all monetary amounts (typically RSD)
       - name: acquisition_amount
         description: Original purchase value (NV — nabavna vrednost)
         tests: [not_null]
+      - name: gross_amount
+        description: Gross carrying amount (may equal acquisition_amount for non-revalued assets)
+      - name: accumulated_depreciation
+        description: Total depreciation charged to date
       - name: net_amount
         description: Current net book value (SV — sadašnja vrednost); null for assets in preparation
       - name: business_ts

@@ -2,20 +2,65 @@ version: 2
 
 models:
   - name: WFCS_T
-    description: Source data product — maker-checker workflow cases.
+    description: >
+      Source data product — maker-checker workflow cases. Records the approval
+      lifecycle for any action subject to the four-eyes principle (maker-checker).
+      A workflow case is linked to its subject via aggregate_id and aggregate_type.
+
+    meta:
+      contract:
+        domain: CFO
+        subdomain: Accounting
+        owner: Računovodstvo
+        refresh_schedule: daily
+        sla: "09:00 local time on each business day"
+        upstream_dependencies:
+          - finance_svc.workflow_case
+        output_ports:
+          - name: WFCS_t1_T
+            description: >
+              T-1 snapshot. One row per workflow case as of the previous business day.
+              Consumed by the DISP mart to attach approval status to disposal records.
+          - name: WFCS_m1_T
+            description: >
+              M-1 snapshot. One row per workflow case as of the last calendar day of
+              the previous month.
+        dq_thresholds:
+          not_null: 100%
+          unique: 100%
+          accepted_values: 100%
+
     columns:
       - name: case_id
+        description: Surrogate PK from finance_svc.workflow_case
         tests: [not_null]
       - name: case_number
+        description: Human-readable case identifier (e.g. WF-000001)
+        tests: [not_null]
+      - name: aggregate_type
+        description: Type of the subject entity (e.g. AssetOperationRequest)
+        tests: [not_null]
+      - name: aggregate_id
+        description: PK of the subject entity; join target for the linked business object
         tests: [not_null]
       - name: operation_type
+        description: "ACTIVATION | DISPOSAL | LOCATION_CHANGE | CUSTODIAN_CHANGE"
         tests: [not_null]
       - name: workflow_status
+        description: "PENDING | APPROVED | REJECTED — current state of the approval"
         tests: [not_null]
+      - name: maker_username
+        description: Username of the person who created the case (four-eyes maker)
+      - name: checker_username
+        description: Username of the person who resolved the case (four-eyes checker); null if pending
       - name: business_ts
+        description: Date the workflow case was submitted
         tests: [not_null]
       - name: technical_ts
+        description: Timestamp when this row was loaded into the platform
         tests: [not_null]
+      - name: deleted_flag
+        description: "'true' if the source record was absent at load time"
 
   - name: WFCS_t1_T
     description: T-1 output port for WFCS.
