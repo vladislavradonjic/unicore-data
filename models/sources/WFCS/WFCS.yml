@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: WFCS_T
+    description: Source data product — maker-checker workflow cases.
+    columns:
+      - name: case_id
+        tests: [not_null]
+      - name: case_number
+        tests: [not_null]
+      - name: operation_type
+        tests: [not_null]
+      - name: workflow_status
+        tests: [not_null]
+      - name: business_ts
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]
+
+  - name: WFCS_t1_T
+    description: T-1 output port for WFCS.
+    columns:
+      - name: case_number
+        tests: [not_null, unique]
+
+  - name: WFCS_m1_T
+    description: M-1 output port for WFCS.
+    columns:
+      - name: case_number
+        tests: [not_null, unique]

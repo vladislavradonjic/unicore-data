@@ -1,0 +1,14 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.python-version
+
+# dbt
+target/
+dbt_packages/
+logs/
+
+# OS
+.DS_Store

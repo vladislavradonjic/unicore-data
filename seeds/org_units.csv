@@ -1,0 +1,8 @@
+org_unit_code,org_unit_name,parent_org_unit_code,level
+OU-BANK,Banka,,1
+OU-IT,Sektor za informacione tehnologije,OU-BANK,2
+OU-FIN,Sektor za finansije i računovodstvo,OU-BANK,2
+OU-RE,Sektor za upravljanje nekretninama,OU-BANK,2
+OU-HR,Sektor za ljudske resurse,OU-BANK,2
+OU-OPS,Sektor za operacije,OU-BANK,2
+OU-RET,Sektor za retail banking,OU-BANK,2

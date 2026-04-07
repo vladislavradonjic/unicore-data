@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: ASGN_T
+    description: >
+      Source data product — asset assignments (location, cost centre, custodian).
+      SCD-style history; one row per assignment record per load.
+    columns:
+      - name: assignment_id
+        tests: [not_null]
+      - name: asset_id
+        tests: [not_null]
+      - name: effective_from
+        description: Date from which this assignment is valid
+        tests: [not_null]
+      - name: business_ts
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]
+
+  - name: ASGN_t1_T
+    description: >
+      T-1 output port for ASGN. All assignment records deduplicated across loads,
+      valid as of the previous business day. Full history preserved.
+    columns:
+      - name: assignment_id
+        tests: [not_null, unique]
+
+  - name: ASGN_m1_T
+    description: M-1 output port for ASGN.
+    columns:
+      - name: assignment_id
+        tests: [not_null, unique]

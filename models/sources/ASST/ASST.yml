@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: ASST_T
+    description: >
+      Source data product — assets with current book state joined in.
+      One row per asset per load; insert-only, bi-temporal.
+      Joins asset_svc.asset with the open asset_book_state record (effective_to is null).
+    columns:
+      - name: asset_id
+        description: Surrogate PK from asset_svc.asset
+        tests: [not_null]
+      - name: asset_number
+        description: Human-readable inventory number (e.g. OS-000001)
+        tests: [not_null]
+      - name: lifecycle_status
+        description: "ACTIVE | IN_PREPARATION | DISPOSED | SOLD | DONATED"
+        tests: [not_null]
+      - name: acquisition_amount
+        description: Original purchase value (NV — nabavna vrednost)
+        tests: [not_null]
+      - name: net_amount
+        description: Current net book value (SV — sadašnja vrednost); null for assets in preparation
+      - name: business_ts
+        description: activation_date if available, else asset creation date
+        tests: [not_null]
+      - name: technical_ts
+        description: Timestamp when this row was loaded into the platform
+        tests: [not_null]
+      - name: deleted_flag
+        description: "'true' if the source record was absent at load time"
+        tests: [not_null]
+
+  - name: ASST_t1_T
+    description: >
+      T-1 output port for ASST. One row per asset reflecting its latest known
+      state as of the previous business day.
+    columns:
+      - name: asset_id
+        tests: [not_null, unique]
+
+  - name: ASST_m1_T
+    description: >
+      M-1 output port for ASST. One row per asset reflecting its latest known
+      state as of the last calendar day of the previous month.
+    columns:
+      - name: asset_id
+        tests: [not_null, unique]

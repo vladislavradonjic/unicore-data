@@ -1,0 +1,54 @@
+version: 2
+
+sources:
+  - name: asset_svc
+    database: unicore
+    schema: asset_svc
+    description: Asset service — asset lifecycle, assignments, inventory
+    tables:
+      - name: asset
+        description: Activated fixed assets and intangible investments
+      - name: asset_preparation
+        description: Assets in preparation before activation
+      - name: asset_component
+        description: Sub-components of composite assets
+      - name: asset_book_state
+        description: Book value history per asset per period
+      - name: asset_assignment
+        description: Location and custodian assignment history
+      - name: asset_operation_request
+        description: Requests for asset operations (activation, disposal, transfer)
+      - name: inventory_session
+        description: Inventory (popis) sessions
+      - name: inventory_item_result
+        description: Per-asset results within an inventory session
+
+  - name: finance_svc
+    database: unicore
+    schema: finance_svc
+    description: Finance workflow service — depreciation, accounting events, maker-checker
+    tables:
+      - name: depreciation_run
+        description: Monthly depreciation run headers
+      - name: depreciation_run_item
+        description: Per-asset depreciation amounts within a run
+      - name: accounting_event
+        description: Accounting events linked to workflow cases
+      - name: workflow_case
+        description: Maker-checker workflow cases
+      - name: workflow_action
+        description: Individual actions within a workflow case
+      - name: period_calendar
+        description: Fiscal period calendar
+
+  - name: reference_svc
+    database: unicore
+    schema: reference_svc
+    description: Reference data service — codebooks and mappings
+    tables:
+      - name: codebook
+        description: Codebook definitions
+      - name: codebook_entry
+        description: Individual codebook entries
+      - name: reference_mapping
+        description: Cross-domain value mappings

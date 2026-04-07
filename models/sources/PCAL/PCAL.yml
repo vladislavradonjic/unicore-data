@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: PCAL_T
+    description: Source data product — fiscal period calendar.
+    columns:
+      - name: period_id
+        tests: [not_null]
+      - name: period_code
+        description: Period identifier (e.g. 2024-03)
+        tests: [not_null]
+      - name: business_ts
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]
+
+  - name: PCAL_t1_T
+    description: T-1 output port for PCAL.
+    columns:
+      - name: period_code
+        tests: [not_null, unique]
+
+  - name: PCAL_m1_T
+    description: M-1 output port for PCAL.
+    columns:
+      - name: period_code
+        tests: [not_null, unique]

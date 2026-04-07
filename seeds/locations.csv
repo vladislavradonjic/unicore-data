@@ -1,0 +1,13 @@
+location_code,location_name,city,address,region_code,location_type
+LOC-HQ-BG,Centrala Beograd,Beograd,Bulevar Oslobođenja 5,REGION-C,HQ
+LOC-BG-PAL,Filijala Palilula,Beograd,Cara Dušana 48,REGION-C,BRANCH
+LOC-BG-VOZ,Filijala Vožovac,Beograd,Vojvode Stepe 120,REGION-C,BRANCH
+LOC-BG-NOV,Filijala Novi Beograd,Beograd,Jurija Gagarina 14,REGION-C,BRANCH
+LOC-NS-CTR,Filijala Novi Sad Centar,Novi Sad,Trg slobode 9,REGION-N,BRANCH
+LOC-NS-LIM,Filijala Novi Sad Liman,Novi Sad,Bulevar cara Lazara 75,REGION-N,BRANCH
+LOC-NI-CTR,Filijala Niš,Niš,Obrenovićeva 22,REGION-S,BRANCH
+LOC-KG-CTR,Filijala Kragujevac,Kragujevac,Kralja Aleksandra I 48,REGION-C,BRANCH
+LOC-SUB,Filijala Subotica,Subotica,Trg Republike 8,REGION-N,BRANCH
+LOC-KRG,Filijala Kragujevac JUG,Kragujevac,Vojvođanska 14,REGION-C,BRANCH
+LOC-DC-BG,Data centar Beograd,Beograd,Omladinskih brigada 88b,REGION-C,DATA_CENTER
+LOC-ARCH,Arhiva,Beograd,Autokomanda bb,REGION-C,WAREHOUSE

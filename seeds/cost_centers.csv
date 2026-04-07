@@ -1,0 +1,14 @@
+cost_center_code,cost_center_name,org_unit_code,department
+CC-IT-INF,IT Infrastruktura,OU-IT,Informacione tehnologije
+CC-IT-DEV,IT Razvoj,OU-IT,Informacione tehnologije
+CC-IT-SEC,IT Bezbednost,OU-IT,Informacione tehnologije
+CC-FIN-ACC,Računovodstvo,OU-FIN,Finansije
+CC-FIN-REP,Finansijsko izveštavanje,OU-FIN,Finansije
+CC-FIN-TAX,Porezi,OU-FIN,Finansije
+CC-RE-MGT,Upravljanje nekretninama,OU-RE,Nekretnine
+CC-HR-GEN,Ljudski resursi,OU-HR,HR
+CC-OPS-GEN,Opšti poslovi,OU-OPS,Operacije
+CC-RET-BG,Retail Beograd,OU-RET,Retail banking
+CC-RET-NS,Retail Novi Sad,OU-RET,Retail banking
+CC-RET-NI,Retail Niš,OU-RET,Retail banking
+CC-CTRL,Kontroling,OU-FIN,Finansije

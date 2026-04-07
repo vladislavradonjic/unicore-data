@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: DEPR_T
+    description: >
+      Source data product — depreciation run items with run header joined in.
+      One row per asset per depreciation period per load; insert-only, bi-temporal.
+    columns:
+      - name: run_item_id
+        description: Surrogate PK from finance_svc.depreciation_run_item
+        tests: [not_null]
+      - name: period_code
+        description: Fiscal period code (e.g. 2024-03)
+        tests: [not_null]
+      - name: asset_id
+        tests: [not_null]
+      - name: depreciation_amount
+        description: Monthly depreciation charge for this asset in this period
+        tests: [not_null]
+      - name: business_ts
+        description: Date the depreciation run was completed
+        tests: [not_null]
+      - name: technical_ts
+        tests: [not_null]
+
+  - name: DEPR_t1_T
+    description: T-1 output port for DEPR. One row per run item as of previous business day.
+    columns:
+      - name: run_item_id
+        tests: [not_null, unique]
+
+  - name: DEPR_m1_T
+    description: M-1 output port for DEPR. One row per run item as of previous end of month.
+    columns:
+      - name: run_item_id
+        tests: [not_null, unique]

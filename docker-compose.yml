@@ -1,0 +1,21 @@
+services:
+  mock-source:
+    image: postgres:16
+    container_name: unicore-mock-source
+    environment:
+      POSTGRES_DB: unicore
+      POSTGRES_USER: unicore
+      POSTGRES_PASSWORD: unicore
+    ports:
+      - "5433:5432"
+    volumes:
+      - unicore-mock-source-data:/var/lib/postgresql/data
+      - ./docker/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unicore -d unicore"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  unicore-mock-source-data:

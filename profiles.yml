@@ -1,0 +1,12 @@
+unicore_data:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5433
+      user: unicore
+      password: unicore
+      dbname: unicore
+      schema: unicore_analytics
+      threads: 4
